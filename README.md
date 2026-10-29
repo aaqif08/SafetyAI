@@ -1,101 +1,157 @@
-# 🛡 SafetyAI — Incident Intelligence Platform
+# SafetyAI — Incident Intelligence Platform
 
-> **Production-ready web application** implementing the hierarchical ML incident classification research by Afsheen et al. (2026) and Farook et al. (2026).
+An ML-powered platform for industrial incident classification, severity assessment, and process safety insights.
 
----
+SafetyAI analyzes workplace incident narratives and predicts incident mechanisms, injury types, affected body parts, and severity. It combines machine learning with rule-based evidence extraction to support incident analysis and process safety management.
 
-## 📄 Research Paper Mapping
+> **Research context:** This project implements concepts associated with the research by Afsheen et al. (2026) and Farook et al. (2026). Reported research results are distinguished from application-level performance and should be validated against the actual implementation and evaluation data.
 
-| Component | Paper | Implementation |
-|---|---|---|
-| Hierarchical 3-level labeling | Afsheen et al. (OSHA) | `model/classifier.py → rule_based_label()` |
-| TF-IDF + SVD vectorization | Both papers | `SafetyClassifier._featurize()` |
-| SBERT semantic embeddings | Both papers | `SentenceTransformer('all-MiniLM-L6-v2')` |
-| SMOTE class balancing | Afsheen et al. | `imblearn.SMOTE` in training pipeline |
-| Logistic Regression (99.6%) | Afsheen et al. | Sklearn `LogisticRegression` |
-| PSM element mapping | Farook et al. | `get_psm_mapping()` keyword engine |
-| 4-level severity classification | Farook et al. (EMARS) | Integrated into `classify()` endpoint |
-| Risk proxy visualization | Afsheen et al. | Recharts scatter/bar in frontend |
-| Feature importance display | Both papers | `keyword_evidence` in API response |
+## Features
 
----
+- **Incident classification:** Predicts incident mechanism, injury type, and affected body part.
+- **Severity assessment:** Categorizes incidents into four severity levels.
+- **PSM mapping:** Maps incident evidence to relevant Process Safety Management elements.
+- **Explainability:** Displays keyword evidence supporting predictions.
+- **Batch processing:** Classifies up to 20 incident narratives per request.
+- **Pipeline visualization:** Streams processing stages through Server-Sent Events (SSE).
+- **Interactive dashboard:** Includes Home, Classifier, Insights, and About pages.
+- **Risk analytics:** Visualizes severity distributions, risk proxies, and model performance.
+- **Deployment support:** Includes Docker configuration and a standalone frontend demo.
 
-## 🏗 Architecture
+## Architecture
 
-```
+```text
 safetyai/
 ├── frontend/
-│   └── index.html          ← Self-contained React SPA (no build needed)
+│   └── index.html
 ├── backend/
-│   ├── main.py             ← FastAPI REST API + SSE streaming
+│   ├── main.py
 │   └── requirements.txt
 ├── model/
-│   └── classifier.py       ← ML pipeline (TF-IDF + LR + SMOTE + rule engine)
+│   └── classifier.py
 ├── Dockerfile
 └── README.md
 ```
 
-### System Flow
+### Processing Pipeline
+
+```text
+Incident Narrative + Structured Metadata
+                  |
+                  v
+          Text Preprocessing
+                  |
+                  v
+       TF-IDF Feature Extraction
+                  |
+                  v
+       Optional SVD Dimensionality Reduction
+                  |
+                  v
+        Trained Classification Models
+                  |
+                  v
+       Rule-Based Evidence Integration
+                  |
+                  v
+  Mechanism | Injury | Body Part | Severity
+                  |
+                  v
+       PSM Mapping and Evidence
+                  |
+                  v
+          Dashboard / REST API
 ```
-User Narrative
-    ↓
-[Text Preprocessing]  lowercase → remove punctuation → stopword removal → tokenize
-    ↓
-[Feature Engineering] TF-IDF (bigrams, 3000 features) → SVD (100 dims) + structured metadata
-    ↓
-[SMOTE Training]      Synthetic minority oversampling on training set
-    ↓
-[Logistic Regression] Multi-class per label (mechanism / injury / body_part / severity)
-    ↓
-[Rule-based Hybrid]   Keyword scoring blended with model probabilities
-    ↓
-Output: mechanism + injury_type + body_part + severity + PSM mapping + evidence
-```
 
----
+### Technology Stack
 
-## ⚡ Quick Start
+| Component | Technology |
+|---|---|
+| Frontend | React, HTML, Recharts |
+| Backend | Python, FastAPI |
+| Machine learning | scikit-learn |
+| Text processing | TF-IDF, SVD |
+| Semantic embeddings | Sentence Transformers |
+| Class balancing | imbalanced-learn (SMOTE) |
+| API streaming | Server-Sent Events (SSE) |
+| Deployment | Docker |
 
-### Option A — Open Standalone Demo (Fastest)
+*The technologies listed above describe the intended architecture. Verify that each component is implemented and active in the current codebase.*
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.10 or a compatible version supported by the project dependencies
+- pip
+- Docker (optional)
+
+### Option 1: Run the Standalone Demo
+
+Open `frontend/index.html` in a browser.
+
+The standalone demo is intended to run without a backend. Features requiring API inference may be unavailable when the backend is disconnected.
+
+### Option 2: Run the Full Application
+
+**Step 1: Install dependencies**
+
 ```bash
-# No server needed — open in browser directly
-open frontend/index.html
-```
-
-### Option B — Run with Backend API
-```bash
-# 1. Install backend
 pip install -r backend/requirements.txt
-
-# 2. Start API server
-uvicorn backend.main:app --reload --port 8000
-
-# 3. Open frontend
-open frontend/index.html
-# (Frontend auto-connects to localhost:8000 when available)
 ```
 
-### Option C — Docker
+**Step 2: Start the FastAPI server**
+
+Run from the project root:
+
+```bash
+uvicorn backend.main:app --reload --port 8000
+```
+
+**Step 3: Open the frontend**
+
+Open `frontend/index.html` in your browser.
+
+If the frontend cannot connect to the API, check the backend status, API URL, and browser CORS settings.
+
+**Step 4: Explore the API documentation**
+
+With the backend running, visit:
+
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+### Option 3: Run with Docker
+
+Build the image:
+
 ```bash
 docker build -t safetyai .
-docker run -p 8000:8000 safetyai
-open frontend/index.html
 ```
 
----
+Start the container:
 
-## 🔌 API Endpoints
+```bash
+docker run --rm -p 8000:8000 safetyai
+```
+
+Open http://localhost:8000/docs to inspect the API.
+
+*These Docker commands assume that the Dockerfile exposes or serves the API on port 8000. Verify that its configuration matches these commands.*
+
+## API Reference
 
 | Method | Endpoint | Description |
 |---|---|---|
-| POST | `/classify` | Classify a single narrative |
-| POST | `/batch-classify` | Classify up to 20 narratives |
-| GET | `/classify/stream` | SSE streaming pipeline trace |
-| GET | `/examples` | Pre-built example narratives |
-| GET | `/stats` | Paper performance statistics |
-| GET | `/psm-elements` | PSM keyword mappings |
+| `POST` | `/classify` | Classify a single incident narrative |
+| `POST` | `/batch-classify` | Classify up to 20 narratives |
+| `GET` | `/classify/stream` | Stream the processing pipeline |
+| `GET` | `/examples` | Retrieve example incident narratives |
+| `GET` | `/stats` | Retrieve model performance statistics |
+| `GET` | `/psm-elements` | Retrieve PSM keyword mappings |
 
 ### Example Request
+
 ```bash
 curl -X POST http://localhost:8000/classify \
   -H "Content-Type: application/json" \
@@ -107,70 +163,89 @@ curl -X POST http://localhost:8000/classify \
 ```
 
 ### Example Response
+
 ```json
 {
   "success": true,
   "data": {
-    "mechanism": { "predicted": "Fall", "confidence": 0.855, "top3": [...] },
-    "injury_type": { "predicted": "Fracture", "confidence": 0.72, "top3": [...] },
-    "body_part": { "predicted": "Leg/Foot", "confidence": 0.68, "top3": [...] },
-    "severity": { "predicted": "Major", "confidence": 0.829 },
-    "psm_mapping": [{ "element": "Hazard Identification", "evidence": ["risk"] }],
-    "keyword_evidence": [{ "label": "Fall", "keywords": ["fell","scaffold","floor"] }],
-    "preprocessing": { "original_length": 13, "cleaned_length": 8, "cleaned": "worker fell scaffold construction site fractured leg" },
-    "inference_time_ms": 12,
-    "pipeline": ["Text Cleaning","Stopword Removal","TF-IDF Vectorization","SVD Reduction","Logistic Regression","SMOTE Balancing"]
+    "mechanism": {
+      "predicted": "Fall",
+      "confidence": 0.855,
+      "top3": []
+    },
+    "injury_type": {
+      "predicted": "Fracture",
+      "confidence": 0.72,
+      "top3": []
+    },
+    "body_part": {
+      "predicted": "Leg/Foot",
+      "confidence": 0.68,
+      "top3": []
+    },
+    "severity": {
+      "predicted": "Major",
+      "confidence": 0.829
+    },
+    "psm_mapping": [],
+    "keyword_evidence": [],
+    "inference_time_ms": 12
   }
 }
 ```
 
----
+*Illustrative response structure only. Replace the empty arrays and example confidence values with an actual API response before presenting this as a verified output.*
 
-## 📊 Key Results (from papers)
+## Machine Learning Methodology
 
-| Model | Study | Accuracy | F1 |
-|---|---|---|---|
-| **Mixed-Feature Logistic Regression** | OSHA | **99.6%** | 0.99 |
+| Component | Purpose |
+|---|---|
+| TF-IDF | Converts incident text into numerical features |
+| SVD | Reduces feature dimensionality |
+| Sentence-BERT | Generates semantic text representations |
+| SMOTE | Addresses class imbalance during training |
+| Logistic Regression | Predicts incident categories |
+| Rule-based engine | Extracts keyword evidence and supports PSM mapping |
+
+The pipeline combines statistical text representations, supervised classification, and rule-based analysis. The classifier learns patterns from labeled data, while the rule engine applies predefined mappings.
+
+## Research Results
+
+The following figures are reported results from the referenced studies, not independently verified benchmarks of the deployed application.
+
+| Model | Study | Accuracy | F1-score |
+|---|---|---:|---:|
+| Mixed-feature Logistic Regression | OSHA | 99.6% | 0.99 |
 | Linear SVC | OSHA | 93.3% | 0.93 |
 | XGBoost | EMARS | 97.3% | 0.97 |
 | Multi-Layer Perceptron | EMARS | 97.0% | 0.97 |
 | Random Forest | EMARS | 96.8% | 0.96 |
-| Prior Benchmark (Kurian et al. 2020) | — | 88.48% | — |
+| Prior benchmark (Kurian et al., 2020) | Previous study | 88.48% | Not reported |
 
-**Improvement over benchmark: +11.12 percentage points**
+The difference between 99.6% and 88.48% is **11.12 percentage points**. This comparison is meaningful only if the datasets, label definitions, evaluation procedures, and train/test conditions are comparable.
 
----
+## Future Work
 
-## 🎯 App Features
+- Fine-tune DistilBERT or RoBERTa on labeled incident reports.
+- Support CSV uploads and large-scale batch analysis.
+- Integrate SHAP or LIME for instance-level model explanations.
+- Develop configurable risk thresholds and monitoring alerts.
+- Explore multilingual incident classification.
+- Introduce authentication, access controls, and audit logging.
+- Evaluate generalization on independent datasets and unseen incidents.
 
-- ✅ **4-page dashboard**: Home, Classifier, Insights, About
-- ✅ **Real-time pipeline trace**: Watch each step execute
-- ✅ **Hierarchical classification**: 3 output levels simultaneously
-- ✅ **Severity prediction**: Moderate / Serious / Major / Catastrophic
-- ✅ **PSM element mapping**: Links output to safety management elements
-- ✅ **Keyword evidence panel**: Shows which words drove the prediction
-- ✅ **7 pre-built examples**: One per incident mechanism category
-- ✅ **Interactive charts**: Model performance, risk proxy, severity distribution
-- ✅ **SSE streaming endpoint**: Real-time processing trace via FastAPI
-- ✅ **Docker ready**: Single-file deployment
-- ✅ **Zero-dependency demo**: Frontend works offline without backend
+## References
 
----
+1. Afsheen, A. et al. (2026). *Enhancing Process Safety through Machine Learning*. Sathyabama Institute.
+2. Farook, A. et al. (2026). *Applying AI and ML to Analyse Major Accident Reports*. Sathyabama Institute.
+3. Kurian, D. et al. (2020). “Using ML to Categorize Incident Reports.” *Journal of Loss Prevention in the Process Industries*, 64, 104069.
+4. Reimers, N. and Gurevych, I. (2019). “Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks.” *Proceedings of EMNLP-IJCNLP 2019*.
 
-## 🔮 Future Improvements
+## Disclaimer
 
-1. Fine-tune DistilBERT / RoBERTa on OSHA corpus for contextual embeddings
-2. Integrate real OSHA CSV upload and batch processing
-3. Real-time monitoring dashboard with alert thresholds
-4. Multi-language support via SBERT's multilingual models
-5. SHAP/LIME integration for instance-level explainability
-6. Authentication + audit log for regulatory deployment
+SafetyAI is a research and analytical prototype. Its predictions are intended to support incident review, not replace qualified safety professionals, formal risk assessments, regulatory reporting, or emergency-response procedures.
 
----
+## Contributors
 
-## 📚 References
+Developed as a research-driven application for machine-learning-assisted industrial incident analysis.
 
-- Afsheen, A. et al. (2026). *Enhancing Process Safety through Machine Learning*. Sathyabama Institute.
-- Farook, A. et al. (2026). *Applying AI and ML to Analyse Major Accident Reports*. Sathyabama Institute.
-- Kurian, D. et al. (2020). *Using ML to Categorize Incident Reports*. J Loss Prev Process Ind, 64, 104069.
-- Reimers, N. & Gurevych, I. (2019). *Sentence-BERT*. EMNLP-IJCNLP 2019.
